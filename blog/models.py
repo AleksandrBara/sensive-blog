@@ -10,6 +10,30 @@ class PostQuerySet(models.QuerySet):
         posts_at_year = self.filter(published_at__year=year).order_by('published_at')
         return posts_at_year
 
+    def popular(self):
+        return self.annotate(
+            likes_count=Count('likes'),
+            ).order_by('-likes_count')
+
+    # При использовании 2-х .annotate,
+    # промежуточная структура данных всё же создается внутри БД и поглощает море вычислительных ресурсов.
+    def fetch_with_comments_count(self):
+        most_popular_posts_ids = [post.id for post in self]
+
+        posts_with_comments = Post.objects.filter(
+            id__in=most_popular_posts_ids
+            ).annotate(comments_count=Count('comments'),)
+        ids_and_comments = posts_with_comments.values_list(
+            'id',
+            'comments_count',
+            )
+        count_for_id = dict(ids_and_comments)
+
+        for post in self:
+            post.comments_count = count_for_id[post.id]
+
+        return self
+
 class Post(models.Model):
     title = models.CharField('Заголовок', max_length=200)
     text = models.TextField('Текст')
@@ -52,7 +76,6 @@ class TagQuerySet(models.QuerySet):
             ).order_by('-posts_count')
         return popular_tags
 
-
 class Tag(models.Model):
     objects = TagQuerySet.as_manager()
     title = models.CharField('Тег', max_length=20, unique=True)
@@ -70,7 +93,6 @@ class Tag(models.Model):
         ordering = ['title']
         verbose_name = 'тег'
         verbose_name_plural = 'теги'
-
 
 class Comment(models.Model):
     post = models.ForeignKey(
