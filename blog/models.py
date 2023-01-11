@@ -15,6 +15,11 @@ class PostQuerySet(models.QuerySet):
             likes_count=Count('likes'),
         ).order_by('-likes_count')
 
+    def fresh(self):
+        return self.annotate(
+            comments_count=Count('comments'),
+        ).order_by('-published_at')
+
     def fetch_with_tags_count(self):
         posts_ids = [post.id for post in self]
         posts_with_tags = Post.objects.filter(
