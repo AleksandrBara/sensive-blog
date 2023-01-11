@@ -13,7 +13,23 @@ class PostQuerySet(models.QuerySet):
     def popular(self):
         return self.annotate(
             likes_count=Count('likes'),
-            ).order_by('-likes_count')
+        ).order_by('-likes_count')
+
+    def fetch_with_tags_count(self):
+        posts_ids = [post.id for post in self]
+        posts_with_tags = Post.objects.filter(
+            id__in=posts_ids
+        ).annotate(tags_count=Count('tags__posts'), )
+        ids_and_tags = posts_with_tags.values_list(
+            'id',
+            'tags_count',
+        )
+        count_for_id = dict(ids_and_tags)
+
+        for post in self:
+            post.tags_count = count_for_id[post.id]
+
+        return self
 
     # При использовании 2-х .annotate,
     # промежуточная структура данных всё же создается внутри БД и поглощает море вычислительных ресурсов.
@@ -22,17 +38,18 @@ class PostQuerySet(models.QuerySet):
 
         posts_with_comments = Post.objects.filter(
             id__in=most_popular_posts_ids
-            ).annotate(comments_count=Count('comments'),)
+        ).annotate(comments_count=Count('comments'), )
         ids_and_comments = posts_with_comments.values_list(
             'id',
             'comments_count',
-            )
+        )
         count_for_id = dict(ids_and_comments)
 
         for post in self:
             post.comments_count = count_for_id[post.id]
 
         return self
+
 
 class Post(models.Model):
     title = models.CharField('Заголовок', max_length=200)
@@ -68,13 +85,15 @@ class Post(models.Model):
         verbose_name = 'пост'
         verbose_name_plural = 'посты'
 
+
 class TagQuerySet(models.QuerySet):
 
     def popular(self):
         popular_tags = self.annotate(
             posts_count=Count('posts'),
-            ).order_by('-posts_count')
+        ).order_by('-posts_count')
         return popular_tags
+
 
 class Tag(models.Model):
     objects = TagQuerySet.as_manager()
@@ -93,6 +112,7 @@ class Tag(models.Model):
         ordering = ['title']
         verbose_name = 'тег'
         verbose_name_plural = 'теги'
+
 
 class Comment(models.Model):
     post = models.ForeignKey(
@@ -116,4 +136,3 @@ class Comment(models.Model):
         ordering = ['published_at']
         verbose_name = 'комментарий'
         verbose_name_plural = 'комментарии'
-
