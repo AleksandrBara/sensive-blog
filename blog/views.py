@@ -56,7 +56,7 @@ def index(request):
 
 def post_detail(request, slug):
     post = get_object_or_404(
-        Post.objects.annotate(likes_count=Count('likes')).get(slug=slug)
+        Post.objects.annotate(likes_count=Count('likes')), slug=slug
     )
     comments = Comment.objects.filter(post=post).prefetch_related('author')
     serialized_comments = []
@@ -104,7 +104,7 @@ def post_detail(request, slug):
 
 
 def tag_filter(request, tag_title):
-    tag = get_object_or_404(Tag.objects.get(title=tag_title))
+    tag = get_object_or_404(Tag.objects, title=tag_title)
     popular_tags = Tag.objects.popular()
     most_popular_tags = popular_tags[:PAGE_AREA_COUNT]
 
