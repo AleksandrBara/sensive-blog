@@ -27,21 +27,19 @@ def serialize_tag(tag):
 
 
 def index(request):
-    most_popular_posts = Post.objects.popular().prefetch_related(
-        'author',
+    most_popular_posts = Post.objects.popular().select_related('author').prefetch_related(
         Prefetch('tags', queryset=Tag.objects.annotate(posts_count=Count('posts')))
     )[:PAGE_AREA_COUNT].fetch_with_comments_count()
 
     fresh_posts = Post.objects.order_by(
-        'published_at'
-    ).annotate(
-        comments_count=Count('comments')
+        '-published_at'
+    ).select_related(
+        'author'
     ).prefetch_related(
-        'author',
         Prefetch('tags', queryset=Tag.objects.annotate(posts_count=Count('posts')))
-    )
+    ).fetch_with_comments_count()
 
-    the_freshest_posts = list(fresh_posts)[-PAGE_AREA_COUNT:]
+    # the_freshest_posts = list(fresh_posts)[-PAGE_AREA_COUNT:]
     most_popular_tags = Tag.objects.popular()[:PAGE_AREA_COUNT].annotate(
         posts_count=Count('posts')
     )
@@ -51,7 +49,7 @@ def index(request):
             serialize_post(post) for post in most_popular_posts
         ],
         'page_posts': [
-            serialize_post(post) for post in the_freshest_posts
+            serialize_post(post) for post in fresh_posts
         ],
         'popular_tags': [
             serialize_tag(tag) for tag in most_popular_tags
@@ -90,8 +88,7 @@ def post_detail(request, slug):
 
     most_popular_tags = Tag.objects.popular()[:5].annotate(posts_count=Count('posts'))
 
-    most_popular_posts = Post.objects.popular().prefetch_related(
-        'author',
+    most_popular_posts = Post.objects.popular().select_related('author').prefetch_related(
         Prefetch('tags', queryset=Tag.objects.annotate(posts_count=Count('posts')))
     )[:PAGE_AREA_COUNT].fetch_with_comments_count()
 
@@ -107,13 +104,11 @@ def tag_filter(request, tag_title):
     tag = get_object_or_404(Tag.objects, title=tag_title)
     most_popular_tags = Tag.objects.popular()[:PAGE_AREA_COUNT].annotate(posts_count=Count('posts'))
 
-    most_popular_posts = Post.objects.popular().prefetch_related(
-        'author',
+    most_popular_posts = Post.objects.popular().select_related('author').prefetch_related(
         Prefetch('tags', queryset=Tag.objects.annotate(posts_count=Count('posts')))
     )[:PAGE_AREA_COUNT].fetch_with_comments_count()
 
-    related_posts = tag.posts.all()[:20].prefetch_related(
-        'author',
+    related_posts = tag.posts.all()[:20].select_related('author').prefetch_related(
         Prefetch('tags', queryset=Tag.objects.annotate(posts_count=Count('posts')))
     ).fetch_with_comments_count()
 
