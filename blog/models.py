@@ -59,16 +59,16 @@ class Post(models.Model):
 
     objects = PostQuerySet.as_manager()
 
+    class Meta:
+        ordering = ['-published_at']
+        verbose_name = 'пост'
+        verbose_name_plural = 'посты'
+
     def __str__(self):
         return self.title
 
     def get_absolute_url(self):
         return reverse('post_detail', args={'slug': self.slug})
-
-    class Meta:
-        ordering = ['-published_at']
-        verbose_name = 'пост'
-        verbose_name_plural = 'посты'
 
 
 class TagQuerySet(models.QuerySet):
